@@ -2,18 +2,35 @@
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 
-// The underlying model has a context of 1,024 tokens, out of which 26 are used by the internal prompt,
-// leaving about 998 tokens for the input text. Each token corresponds, roughly, to about 4 characters, so 4,000
-// is used as a limit to warn the user the content might be too long to summarize.
 const MAX_MODEL_CHARS = 4000;
 
 let pageContent = '';
+let pageUrl = '';
 
-const summaryElement = document.body.querySelector('#summary');
-const warningElement = document.body.querySelector('#warning');
+const summaryElement = document.querySelector('#summary');
+const warningElement = document.querySelector('#warning');
 const summaryTypeSelect = document.querySelector('#type');
 const summaryFormatSelect = document.querySelector('#format');
 const summaryLengthSelect = document.querySelector('#length');
+const copyBtn = document.querySelector('#copyBtn');
+const shareBtn = document.querySelector('#shareBtn');
+
+[summaryTypeSelect, summaryFormatSelect, summaryLengthSelect].forEach((e) =>
+  e.addEventListener('change', onConfigChange)
+);
+
+copyBtn.addEventListener('click', copySummary);
+shareBtn.addEventListener('click', shareOnLinkedIn);
+
+chrome.storage.session.get(['pageContent', 'pageUrl'], ({ pageContent, pageUrl: url }) => {
+  pageUrl = url || '';
+  onContentChange(pageContent);
+});
+
+chrome.storage.session.onChanged.addListener((changes) => {
+  if (changes.pageContent) onContentChange(changes.pageContent.newValue);
+  if (changes.pageUrl) pageUrl = changes.pageUrl.newValue;
+});
 
 function onConfigChange() {
   const oldContent = pageContent;
@@ -21,48 +38,29 @@ function onConfigChange() {
   onContentChange(oldContent);
 }
 
-[summaryTypeSelect, summaryFormatSelect, summaryLengthSelect].forEach((e) =>
-  e.addEventListener('change', onConfigChange)
-);
-
-chrome.storage.session.get('pageContent', ({ pageContent }) => {
-  onContentChange(pageContent);
-});
-
-chrome.storage.session.onChanged.addListener((changes) => {
-  const pageContent = changes['pageContent'];
-  onContentChange(pageContent.newValue);
-});
-
 async function onContentChange(newContent) {
-  if (pageContent == newContent) {
-    // no new content, do nothing
+  if (pageContent === newContent) return;
+  pageContent = newContent;
+
+  if (!newContent) {
+    showSummary("There's nothing to summarize.");
     return;
   }
-  pageContent = newContent;
-  let summary;
-  if (newContent) {
-    if (newContent.length > MAX_MODEL_CHARS) {
-      updateWarning(
-        `Text is too long for summarization with ${newContent.length} characters (maximum supported content length is ~4000 characters).`
-      );
-    } else {
-      updateWarning('');
-    }
-    showSummary('Loading...');
-    summary = await generateSummary(newContent);
+
+  if (newContent.length > MAX_MODEL_CHARS) {
+    updateWarning(`⚠️ Text too long (${newContent.length} chars, max ~4000).`);
   } else {
-    summary = "There's nothing to summarize";
+    updateWarning('');
   }
+
+  showSummary('Loading summary...');
+  const summary = await generateSummary(newContent);
   showSummary(summary);
 }
 
 async function generateSummary(text) {
   try {
-    // Check if Summarizer API is available
-    if (!('Summarizer' in self)) {
-      return 'Summarizer API is not available in this browser';
-    }
+    if (!('Summarizer' in self)) return 'Summarizer API not available in this browser.';
 
     const options = {
       type: summaryTypeSelect.value,
@@ -71,57 +69,52 @@ async function generateSummary(text) {
       expectedInputLanguages: ['en'],
       outputLanguage: 'en',
       expectedContextLanguages: ['en'],
-      sharedContext: 'this is a website',
+      sharedContext: 'Summarizing online articles for sharing.',
       monitor(m) {
         m.addEventListener('downloadprogress', (e) => {
-          console.log(`Downloaded ${(e.loaded * 100).toFixed(1)}%`);
           showSummary(`Downloading model... ${(e.loaded * 100).toFixed(1)}%`);
         });
-      }
+      },
     };
 
     const availability = await Summarizer.availability();
-    
-    if (availability === 'unavailable') {
-      return 'Summarizer API is not available';
-    }
+    if (availability === 'unavailable') return 'Summarizer API is unavailable.';
+    if (availability === 'after-download' && !navigator.userActivation.isActive)
+      return 'User interaction required to download model.';
 
-    // Check for user activation if required
-    if (availability === 'after-download' && !navigator.userActivation.isActive) {
-      return 'User interaction required to download the summarization model';
-    }
-
-    // Create summarizer with options
     const summarizer = await Summarizer.create(options);
-    
-    // Wait for model to be ready if it needs downloading
-    if (availability === 'after-download') {
-      await summarizer.ready;
-    }
-
-    // Generate summary with context
     const summary = await summarizer.summarize(text, {
-      context: 'Summarizing web page content for easy reading.'
+      context: 'Summarizing webpage content for quick sharing.',
     });
-    
     summarizer.destroy();
     return summary;
   } catch (e) {
-    console.log('Summary generation failed');
-    console.error(e);
-    return 'Error: ' + e.message;
+    console.error('Summary generation failed:', e);
+    return `Error: ${e.message}`;
   }
 }
 
-async function showSummary(text) {
+function showSummary(text) {
   summaryElement.innerHTML = DOMPurify.sanitize(marked.parse(text));
 }
 
-async function updateWarning(warning) {
+function updateWarning(warning) {
   warningElement.textContent = warning;
-  if (warning) {
-    warningElement.removeAttribute('hidden');
-  } else {
-    warningElement.setAttribute('hidden', '');
-  }
+  warning ? warningElement.removeAttribute('hidden') : warningElement.setAttribute('hidden', '');
+}
+
+async function copySummary() {
+  const text = summaryElement.innerText.trim();
+  if (!text) return alert('No summary to copy!');
+  await navigator.clipboard.writeText(`${text}\n\nRead full article: ${pageUrl}`);
+  alert('✅ Summary copied to clipboard!');
+}
+
+function shareOnLinkedIn() {
+  const summaryText = summaryElement.innerText.trim();
+  if (!summaryText) return alert('No summary to share!');
+  const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
+    pageUrl
+  )}&summary=${encodeURIComponent(summaryText)}`;
+  window.open(linkedInUrl, '_blank');
 }

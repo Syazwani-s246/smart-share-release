@@ -1,9 +1,14 @@
 <!doctype html>
 <html>
   <head>
+    <meta charset="utf-8" />
+    <title>SmartShare</title>
     <link rel="stylesheet" type="text/css" href="index.css" />
   </head>
   <body>
+    <h2>🧠 SmartShare</h2>
+    <p class="subtitle">Summarize & share any article instantly.</p>
+
     <div class="card">
       <fieldset>
         <legend>Settings</legend>
@@ -33,8 +38,16 @@
         </div>
       </fieldset>
     </div>
+
     <div class="warning card" hidden id="warning"></div>
+
     <div class="card" id="summary">Nothing to show...</div>
+
+    <div class="actions">
+      <button id="copyBtn" class="btn">📋 Copy Summary</button>
+      <button id="shareBtn" class="btn-primary">🔗 Share on LinkedIn</button>
+    </div>
+
     <script src="index.js" type="module"></script>
   </body>
 </html>

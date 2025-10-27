@@ -59,51 +59,30 @@ async function onContentChange(newContent) {
 
 async function generateSummary(text) {
   try {
-    // Check if Summarizer API is available
-    if (!('Summarizer' in self)) {
-      return 'Summarizer API is not available in this browser';
-    }
-
     const options = {
+      sharedContext: 'this is a website',
       type: summaryTypeSelect.value,
       format: summaryFormatSelect.value,
-      length: summaryLengthSelect.value,
-      expectedInputLanguages: ['en'],
-      outputLanguage: 'en',
-      expectedContextLanguages: ['en'],
-      sharedContext: 'this is a website',
-      monitor(m) {
-        m.addEventListener('downloadprogress', (e) => {
-          console.log(`Downloaded ${(e.loaded * 100).toFixed(1)}%`);
-          showSummary(`Downloading model... ${(e.loaded * 100).toFixed(1)}%`);
-        });
-      }
+      length: length.value
     };
 
     const availability = await Summarizer.availability();
-    
+    let summarizer;
     if (availability === 'unavailable') {
       return 'Summarizer API is not available';
     }
-
-    // Check for user activation if required
-    if (availability === 'after-download' && !navigator.userActivation.isActive) {
-      return 'User interaction required to download the summarization model';
-    }
-
-    // Create summarizer with options
-    const summarizer = await Summarizer.create(options);
-    
-    // Wait for model to be ready if it needs downloading
-    if (availability === 'after-download') {
+    if (availability === 'available') {
+      // The Summarizer API can be used immediately .
+      summarizer = await Summarizer.create(options);
+    } else {
+      // The Summarizer API can be used after the model is downloaded.
+      summarizer = await Summarizer.create(options);
+      summarizer.addEventListener('downloadprogress', (e) => {
+        console.log(`Downloaded ${e.loaded * 100}%`);
+      });
       await summarizer.ready;
     }
-
-    // Generate summary with context
-    const summary = await summarizer.summarize(text, {
-      context: 'Summarizing web page content for easy reading.'
-    });
-    
+    const summary = await summarizer.summarize(text);
     summarizer.destroy();
     return summary;
   } catch (e) {

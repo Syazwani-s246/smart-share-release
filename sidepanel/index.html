@@ -1,53 +1,85 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>SmartShare</title>
-    <link rel="stylesheet" type="text/css" href="index.css" />
-  </head>
-  <body>
-    <h2>🧠 SmartShare</h2>
-    <p class="subtitle">Summarize & share any article instantly.</p>
 
-    <div class="card">
-      <fieldset>
-        <legend>Settings</legend>
-        <div>
-          <label for="type">Summary Type:</label>
-          <select id="type">
-            <option value="key-points" selected>Key Points</option>
-            <option value="tldr">TL;DR</option>
-            <option value="teaser">Teaser</option>
-            <option value="headline">Headline</option>
-          </select>
+<head>
+  <meta charset="utf-8" />
+  <title>🧠 SmartShare</title>
+  <link rel="stylesheet" type="text/css" href="index.css" />
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- 🧠 SIDEBAR -->
+    <aside class="history-sidebar" id="historyPanel">
+      <div class="sidebar-header">
+        <h4>🕓 History</h4>
+        <button id="toggleHistory" class="button outline small">⇄</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </aside>
+
+    <!-- ⚙️ MAIN CONTENT -->
+    <main class="main-content">
+      <h2>🧠 SmartShare</h2>
+      <p class="subtitle">Summarize & share any article instantly.</p>
+
+      <!-- 💬 Chat Section -->
+      <div id="chatContainer" class="card chat-section">
+        <div id="chatMessage" class="chat-message">Loading SmartShare...</div>
+        <div id="chatActions" class="chat-actions" hidden>
+          <button id="chatYes" class="btn-primary">✨ Yes, summarize it!</button>
+          <button id="chatNo" class="btn">No, maybe later</button>
         </div>
-        <div>
-          <label for="length">Length:</label>
-          <select id="length">
-            <option value="short" selected>Short</option>
-            <option value="medium">Medium</option>
-            <option value="long">Long</option>
-          </select>
-        </div>
-        <div>
-          <label for="format">Format:</label>
-          <select id="format">
-            <option value="markdown" selected>Markdown</option>
-            <option value="plain-text">Plain text</option>
-          </select>
-        </div>
-      </fieldset>
-    </div>
+      </div>
 
-    <div class="warning card" hidden id="warning"></div>
+      <!-- SETTINGS -->
+      <div class="card" id="settingsCard" hidden>
+        <fieldset id="settings">
+          <legend>Settings</legend>
 
-    <div class="card" id="summary">Nothing to show...</div>
+          <div>
+            <label for="type">Summary Type:</label>
+            <select id="type">
+              <option value="key-points" selected>Key Points</option>
+              <option value="tldr">TL;DR</option>
+              <option value="teaser">Teaser</option>
+              <option value="headline">Headline</option>
+            </select>
+          </div>
 
-    <div class="actions">
-      <button id="copyBtn" class="btn">📋 Copy Summary</button>
-      <button id="shareBtn" class="btn-primary">🔗 Share on LinkedIn</button>
-    </div>
+          <div>
+            <label for="length">Length:</label>
+            <select id="length">
+              <option value="short" selected>Short</option>
+              <option value="medium">Medium</option>
+              <option value="long">Long</option>
+            </select>
+          </div>
 
-    <script src="index.js" type="module"></script>
-  </body>
+          <div>
+            <label for="format">Format:</label>
+            <select id="format">
+              <option value="markdown" selected>Markdown</option>
+              <option value="plain-text">Plain text</option>
+            </select>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="warning card" hidden id="warning"></div>
+
+      <div class="card" id="summary" hidden>Nothing to show...</div>
+
+      <div class="actions" id="actionButtons" hidden>
+        <button id="copyBtn" class="btn">📋 Copy</button>
+        <button id="shareBtn" class="btn-primary">🔗 Share to LinkedIn</button>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- SCRIPT -->
+  <script src="index.js" type="module"></script>
+</body>
+
 </html>
